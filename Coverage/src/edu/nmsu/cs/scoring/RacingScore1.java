@@ -38,7 +38,7 @@ public class RacingScore1
 	public int overallScore()
 	{
 		int s;
-		if (score1 < score2)
+		if (score1 > score2) // changed from score1 < score2: point of program is to find smallest # and subtract from total of all 3
 			s = score2;
 		else
 			s = score1;
