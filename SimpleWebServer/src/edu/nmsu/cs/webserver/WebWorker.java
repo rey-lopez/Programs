@@ -22,18 +22,33 @@ package edu.nmsu.cs.webserver;
  **/
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+
 public class WebWorker implements Runnable
 {
-
+	private boolean debug = true;
+	private String pagestat = "HTTP/1.1 202 OK\n";
+	private String testpath;
+	private File path;
+	private boolean exists;
+	private String line;
+	private boolean home = true;
+	
+	
 	private Socket socket;
+	
 
 	/**
 	 * Constructor: must have a valid open socket
@@ -74,7 +89,8 @@ public class WebWorker implements Runnable
 	 **/
 	private void readHTTPRequest(InputStream is)
 	{
-		String line;
+
+		//String line;
 		BufferedReader r = new BufferedReader(new InputStreamReader(is));
 		while (true)
 		{
@@ -83,18 +99,59 @@ public class WebWorker implements Runnable
 				while (!r.ready())
 					Thread.sleep(1);
 				line = r.readLine();
-				System.err.println("Request line: (" + line + ")");
-				if (line.length() == 0)
-					break;
-			}
-			catch (Exception e)
-			{
-				System.err.println("Request error: " + e);
-				break;
-			}
-		}
-		return;
-	}
+				 String splitline[] = line.split(" ");
+				
+				 // checks if GET is present
+				if(splitline.length > 1 && splitline[0].equals("GET")) {
+					
+						System.err.println("Get Found: " + line);
+					int getItemLength = splitline[1].length();
+					if((splitline[1].equals("/") == false))
+								home = false;
+					if ((splitline[1].substring(getItemLength -5).equals(".html")) || splitline[1].substring(getItemLength -4).equals(".txt")) {
+						
+							System.err.println("Web Page Found: " + splitline[1]);
+							testpath = splitline[1].substring(1);
+							home = false;
+			
+						try {
+							File path = new File(testpath); 
+							 exists = path.exists();
+							
+							
+							// checks if file exists
+							if(exists == false) {
+								pagestat = "HTTP/1.1 404 not found\n";
+								} // if 
+							
+							else {
+								pagestat = "HTTP/1.1 200 OK\n";
+								} // else 
+							
+						} // second try
+									
+							catch (Exception e) {
+								System.err.println(e.getMessage());
+								} // catch
+						
+					} // if html 
+				} // if get
+					
+							System.err.println("Request line: (" + line + ")");
+						
+						if (line.length() == 0)
+							break;
+						
+					} // first try 
+						catch(Exception e) {
+							System.err.println("Request error: " + e);
+							break;
+						} // catch 
+					
+				} // while true 
+					return; 
+				} //HTTPreadrequest 
+			
 
 	/**
 	 * Write the HTTP header lines to the client network connection.
@@ -109,11 +166,11 @@ public class WebWorker implements Runnable
 		Date d = new Date();
 		DateFormat df = DateFormat.getDateTimeInstance();
 		df.setTimeZone(TimeZone.getTimeZone("GMT"));
-		os.write("HTTP/1.1 200 OK\n".getBytes());
+		os.write(pagestat.getBytes());
 		os.write("Date: ".getBytes());
 		os.write((df.format(d)).getBytes());
 		os.write("\n".getBytes());
-		os.write("Server: Jon's very own server\n".getBytes());
+		os.write("Server: Rey's very own server\n".getBytes());
 		// os.write("Last-Modified: Wed, 08 Jan 2003 23:11:55 GMT\n".getBytes());
 		// os.write("Content-Length: 438\n".getBytes());
 		os.write("Connection: close\n".getBytes());
@@ -132,9 +189,48 @@ public class WebWorker implements Runnable
 	 **/
 	private void writeContent(OutputStream os) throws Exception
 	{
-		os.write("<html><head></head><body>\n".getBytes());
-		os.write("<h3>My web server works!</h3>\n".getBytes());
-		os.write("</body></html>\n".getBytes());
+		
+		if ( home == true) {
+			os.write("<html><head></head><body>\n".getBytes());
+			os.write("<h3>My web server works!</h3>\n".getBytes());
+			os.write("</body></html>\n".getBytes());
+		}
+		
+		else {
+			String output;
+			String date = getDate();
+		
+		
+			if (exists == true) {
+				BufferedReader r = new BufferedReader(new FileReader(testpath));
+				output = r.readLine();
+					
+				while (output != null) {
+					String replaceServer = output.replaceAll("<cs371server>", "Reys server");
+					String replaceDate = replaceServer.replaceAll("<cs371date>", date);
+					os.write(replaceDate.getBytes());
+					output = r.readLine();
+				}
+				r.close();
+			} // end if
+		
+			else {
+				os.write("Page not found".getBytes()); }
+			
+		} // else home != true
+
+	} // end write content
+	
+	private String getDate()
+	{
+		String date;
+		Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
+		int day = calendar.get(Calendar.DATE);
+		int month = calendar.get(Calendar.MONTH) + 1;
+		int year = calendar.get(Calendar.YEAR);
+		date = month + "/" + day + "/" + year;
+		
+		return date;
 	}
 
 } // end class

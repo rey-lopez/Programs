@@ -1,0 +1,10 @@
+<project default = "run" name = "Project 1">
+	<target name = "run" depends = "compile">
+		<java classname = "edu.nmsu.cs.webserver.WebServer">
+			<classpath path = "./src"/> 
+			</java>
+	</target>	
+	<target name = "compile">
+		<javac includeantruntime= "false" srcdir = "./src" />
+	</target>
+	</project> 
