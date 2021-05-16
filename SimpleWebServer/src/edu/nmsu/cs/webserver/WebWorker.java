@@ -1,5 +1,7 @@
 package edu.nmsu.cs.webserver;
 
+import java.awt.image.BufferedImage;
+
 /**
  * Web worker: an object of this class executes in its own new thread to receive and respond to a
  * single HTTP request. After the constructor the object executes on its "run" method, and leaves
@@ -22,7 +24,9 @@ package edu.nmsu.cs.webserver;
  **/
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -31,9 +35,13 @@ import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 
 
 public class WebWorker implements Runnable
@@ -45,7 +53,11 @@ public class WebWorker implements Runnable
 	private boolean exists;
 	private String line;
 	private boolean home = true;
-	
+	private String fileType = "text/html";
+	private boolean jpgexists;
+	private boolean pngexists;
+	private boolean gifexists;
+	private boolean favIcon;
 	
 	private Socket socket;
 	
@@ -71,7 +83,7 @@ public class WebWorker implements Runnable
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
 			readHTTPRequest(is);
-			writeHTTPHeader(os, "text/html");
+			writeHTTPHeader(os, fileType); // (os, "text/html")
 			writeContent(os);
 			os.flush();
 			socket.close();
@@ -106,8 +118,17 @@ public class WebWorker implements Runnable
 					
 						System.err.println("Get Found: " + line);
 					int getItemLength = splitline[1].length();
-					if((splitline[1].equals("/") == false))
+					
+					// default case for main home page
+					if((splitline[1].equals("/") == false)) {
 								home = false;
+								//fileType = "text/html";
+					}
+					
+					
+					
+					
+					// case to cover .txt/.html files
 					if ((splitline[1].substring(getItemLength -5).equals(".html")) || splitline[1].substring(getItemLength -4).equals(".txt")) {
 						
 							System.err.println("Web Page Found: " + splitline[1]);
@@ -126,6 +147,7 @@ public class WebWorker implements Runnable
 							
 							else {
 								pagestat = "HTTP/1.1 200 OK\n";
+								//fileType = "text/html";
 								} // else 
 							
 						} // second try
@@ -135,6 +157,124 @@ public class WebWorker implements Runnable
 								} // catch
 						
 					} // if html 
+					
+					
+					/*
+					 * Covers jpg photos
+					 * 
+					 */
+					
+					if ((splitline[1].substring(getItemLength -4).equals(".jpg"))) {
+						
+						System.err.println("Web Page Found: " + splitline[1]);
+						testpath = splitline[1].substring(1);
+						home = false;
+		
+						try {
+							File path = new File(testpath); 
+							jpgexists = path.exists();
+						
+						
+							// checks if file exists
+							if(jpgexists == false) {
+								pagestat = "HTTP/1.1 404 not found\n";
+							} // if 
+						
+							else {
+								pagestat = "HTTP/1.1 200 OK\n";
+								fileType = "image/jpeg";
+							} // else 
+						
+						} // second try
+								
+						catch (Exception e) {
+							System.err.println(e.getMessage());
+							} // catch
+					
+					} // if jpg
+					
+					
+					/*
+					 * Covers png photos
+					 * 
+					 */
+					
+					if ((splitline[1].substring(getItemLength -4).equals(".png"))) {
+						
+						System.err.println("Web Page Found: " + splitline[1]);
+						testpath = splitline[1].substring(1);
+						home = false;
+		
+						try {
+							File path = new File(testpath); 
+							pngexists = path.exists();
+						
+						
+						// checks if file exists
+							if(pngexists == false) {
+								pagestat = "HTTP/1.1 404 not found\n";
+							} // if 
+						
+							else {
+								pagestat = "HTTP/1.1 200 OK\n";
+								fileType = "image/png";
+							} // else 
+						
+						} // second try
+								
+						catch (Exception e) {
+							System.err.println(e.getMessage());
+							} // catch
+					
+					} // if png
+					
+					
+					/*
+					 * Covers gif photos
+					 * 
+					 */
+					
+					if ((splitline[1].substring(getItemLength -4).equals(".gif"))) {
+						
+						System.err.println("Web Page Found: " + splitline[1]);
+						testpath = splitline[1].substring(1);
+						home = false;
+		
+						try {
+							File path = new File(testpath); 
+							gifexists = path.exists();
+						 
+						
+							// checks if file exists
+							if(gifexists == false) {
+								pagestat = "HTTP/1.1 404 not found\n";
+							} // if 
+						
+							else {
+								pagestat = "HTTP/1.1 200 OK\n";
+								fileType = "image/gif";
+							} // else 
+						
+						} // second try
+								
+						catch (Exception e) {
+							System.err.println(e.getMessage());
+							} // catch
+					
+					} // if gif
+					
+					/*
+					 * Covers favicon.ico
+					 * 
+					 */
+					
+					if ((splitline[1].substring(getItemLength -4).equals(".ico"))) {
+						fileType = "image/jpeg";
+						home = false;
+						favIcon = true;
+					
+					} // if favicon.ico
+					
 				} // if get
 					
 							System.err.println("Request line: (" + line + ")");
@@ -189,13 +329,21 @@ public class WebWorker implements Runnable
 	 **/
 	private void writeContent(OutputStream os) throws Exception
 	{
+				
 		
+		/* 
+		 * Used for homepage 
+		 */
 		if ( home == true) {
 			os.write("<html><head></head><body>\n".getBytes());
 			os.write("<h3>My web server works!</h3>\n".getBytes());
 			os.write("</body></html>\n".getBytes());
 		}
 		
+		
+		/* 
+		 * Used to serve text documents to webpage
+		 */
 		else {
 			String output;
 			String date = getDate();
@@ -214,13 +362,72 @@ public class WebWorker implements Runnable
 				r.close();
 			} // end if
 		
+		/*
+		 * Used to serve jpeg images to webpage
+		 */
+			else if (jpgexists == true && fileType.equals("image/jpeg")) {
+				InputStream inputStream = new FileInputStream(testpath);
+				long fileSize = new File(testpath).length();
+				byte[] allBytes = new byte[(int) fileSize];
+				inputStream.read(allBytes);
+					os.write(allBytes);
+				
+			} // jpeg
+			
+			/*
+			 * Used to serve png images to webpage
+			 */
+				else if (pngexists == true && fileType.equals("image/png")) {
+					InputStream inputStream = new FileInputStream(testpath);
+					long fileSize = new File(testpath).length();
+					byte[] allBytes = new byte[(int) fileSize];
+					inputStream.read(allBytes);
+						os.write(allBytes);
+					
+				} // png
+			
+			
+			/*
+			 * Used to serve gif images to webpage
+			 */
+				else if (gifexists == true && fileType.equals("image/gif")) {
+					InputStream inputStream = new FileInputStream(testpath);
+					long fileSize = new File(testpath).length();
+					byte[] allBytes = new byte[(int) fileSize];
+					inputStream.read(allBytes);
+						os.write(allBytes);
+					
+				} // gif
+			
+			/*
+			 * Used to serve favicon.ico
+			 */
+				else if (favIcon == true) {
+				InputStream inputStream = new FileInputStream("favic.jpg");
+				long fileSize = new File("favic.jpg").length();
+				byte[] allBytes = new byte[(int) fileSize];
+				inputStream.read(allBytes);
+					os.write(allBytes);
+							
+			} // favIcon
+			
+			
+			/*
+			 * Used for requested pages that are not found
+			 */
 			else {
 				os.write("Page not found".getBytes()); }
 			
 		} // else home != true
+		
+		
 
 	} // end write content
 	
+	
+	/*
+	 * This is used to create a date for replacement in format month/day/year
+	 */
 	private String getDate()
 	{
 		String date;
@@ -231,6 +438,17 @@ public class WebWorker implements Runnable
 		date = month + "/" + day + "/" + year;
 		
 		return date;
+	}
+	
+	private static String toBinary(byte b) {
+		StringBuilder sb = new StringBuilder("00000000");
+		
+		for (int bit = 0; bit < 8; bit++) {
+			if (((b >> bit) & 1) > 0) {
+				sb.setCharAt(7 - bit,  '1');
+			}
+		}
+		return(sb.toString());
 	}
 
 } // end class

@@ -1,0 +1,9 @@
+1. Estimate the time it will take you to do the assignment, to within a quarter-hour: 
+ I believe it will take me upwards of 3 to 3.5 hours to complete this assignment. I believe I may have difficulty in outputting the images since it is done differently from regular text documents. 
+
+2. Thought/Design: 1 hour
+   Programming: 3 hours
+   Debugging: 1 hour
+   TOTAL: 5 hours
+
+3. To within what percent accuracy was your original estimagte: 42.857% 
